@@ -8,6 +8,7 @@
 
 import { BuilderContext } from '@angular-devkit/architect';
 import { BuildOptions, Metafile, OutputFile, formatMessages } from 'esbuild';
+import { Listr } from 'listr2';
 import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
@@ -20,7 +21,6 @@ import {
   NormalizedOutputOptions,
 } from '../../builders/application/options';
 import { BudgetCalculatorResult } from '../../utils/bundle-calculator';
-import { Spinner } from '../../utils/spinner';
 import { BundleStats, generateEsbuildBuildStatsTable } from '../../utils/stats-table';
 import { BuildOutputFile, BuildOutputFileType, InitialFileRecord } from './bundler-context';
 import { BuildOutputAsset, ExecutionResult } from './bundler-execution-result';
@@ -146,14 +146,22 @@ export async function calculateEstimatedTransferSizes(
 }
 
 export async function withSpinner<T>(text: string, action: () => T | Promise<T>): Promise<T> {
-  const spinner = new Spinner(text);
-  spinner.start();
+  let result;
+  const taskList = new Listr(
+    [
+      {
+        title: text,
+        async task() {
+          result = await action();
+        },
+      },
+    ],
+    { rendererOptions: { clearOutput: true } },
+  );
 
-  try {
-    return await action();
-  } finally {
-    spinner.stop();
-  }
+  await taskList.run();
+
+  return result as T;
 }
 
 export async function withNoProgress<T>(text: string, action: () => T | Promise<T>): Promise<T> {
@@ -180,8 +188,6 @@ export function getFeatureSupport(
     // will be used instead which provides a workaround for the performance issue.
     // For more details: https://bugs.chromium.org/p/v8/issues/detail?id=11536
     'object-rest-spread': false,
-    // Using top-level-await is not guaranteed to be safe with some code optimizations.
-    'top-level-await': false,
   };
 
   // Detect Safari browser versions that have a class field behavior bug

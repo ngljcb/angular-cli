@@ -45,6 +45,7 @@ WEBPACK_IGNORE_TESTS = [
     "tests/commands/serve/ssr-http-requests-assets.js",
     "tests/build/prerender/http-requests-assets.js",
     "tests/build/prerender/error-with-sourcemaps.js",
+    "tests/build/wasm-esm.js",
 ]
 
 def _to_glob(patterns):
@@ -82,8 +83,8 @@ def e2e_suites(name, runner, data):
 
 def _e2e_tests(name, runner, **kwargs):
     # Always specify all the npm packages
-    args = kwargs.pop("templated_args", []) + ["--package"] + [
-        "$(rootpath %s)" % p
+    args = kwargs.pop("templated_args", []) + [
+        "--package $(rootpath %s)" % p
         for p in TESTED_PACKAGES
     ]
 
